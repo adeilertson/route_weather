@@ -333,15 +333,23 @@ def set_hourly_forecast(city, hourly_data, hour):
 def set_rw_icon(forecast, hour):
 
     icon_convert = {
-        'skc': 'icons8-sun-50.png',
-        'sct': 'icons8-partly-cloudy-day-50.png',
-        'bkn': 'icons8-partly-cloudy-day-50.png',
+        'skc-day': 'icons8-sun-50.png',
+        'sct-day': 'icons8-partly-cloudy-day-50.png',
+        'bkn-day': 'icons8-partly-cloudy-day-50.png',
+        'few-day': 'icons8-partly-cloudy-day-50.png',
+        'wind_skc-day': 'icons8-sun-50.png',
+        'wind_few-day': 'icons8-sun-50.png',
+        'wind_sct-day': 'icons8-partly-cloudy-day-50.png',
+        'wind_bkn-day': 'icons8-partly-cloudy-day-50.png',
+        'skc-night': 'icons8-moon-and-stars-50.png',
+        'sct-night': 'icons8-partly-cloudy-night-50.png',
+        'bkn-night': 'icons8-partly-cloudy-night-50.png',
+        'few-night': 'icons8-partly-cloudy-night-50.png',
+        'wind_skc-night': 'icons8-moon-and-stars-50.png',
+        'wind_few-night': 'icons8-moon-and-stars-50.png',
+        'wind_sct-night': 'icons8-partly-cloudy-night-50.png',
+        'wind_bkn-night': 'icons8-partly-cloudy-night-50.png',
         'ovc': 'icons8-clouds-50.png',
-        'few': 'icons8-partly-cloudy-day-50.png',
-        'wind_skc': 'icons8-sun-50.png',
-        'wind_few': 'icons8-sun-50.png',
-        'wind_sct': 'icons8-partly-cloudy-day-50.png',
-        'wink_bkn': 'icons8-partly-cloudy-day-50.png',
         'wind_ovc': 'icons8-clouds-50.png',
         'snow': 'icons8-snow-50.png',
         'rain_snow': 'icons8-sleet-50.png',
@@ -374,6 +382,24 @@ def set_rw_icon(forecast, hour):
     is_day = forecast['properties']['periods'][hour]['isDaytime']
 
     icon_code = icon_url.split('/')[6].split('?')[0].split(',')[0]
+
+    time_sensitive_icon_codes = [
+        'skc',
+        'sct',
+        'bkn',
+        'few',
+        'wind_skc',
+        'wind_few',
+        'wind_sct',
+        'wink_bkn',
+    ]
+
+
+    if icon_code in time_sensitive_icon_codes:
+        if is_day is True:
+            icon_code = f"{icon_code}-day"
+        else:
+            icon_code = f"{icon_code}-night"
 
     icon_name = icon_convert[icon_code]
 
