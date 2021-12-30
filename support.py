@@ -17,11 +17,31 @@ from folium.map import Popup
 from config import api_key
 
 def add_gridpoints(data):
+    """
+    Adds new gridpoints to known gridpoints for future reference.
+
+    Args:
+        data (dict): Gridpoint reference dict with keys 'lat', 'lon', and 'hourly_url'
+
+    Returns:
+        none
+    """
     with open(f'weather_data/gridpoint_coords.pkl', 'wb') as file:
         pickle.dump(data, file)
 
 
 def coords_to_city(latitude, longitude, zip_locs):
+    """
+    Converts lat/lon to city (US) in provided zip locations
+
+    Args:
+        latitude (float): Latitude for location to convert
+        longitude (float): Longitude for location to convert
+        zip_locs (list): List of dicts with lat/lon data for cities
+
+    Returns:
+        str: Nearest city for coordinates
+    """
     coord_lat = round(latitude, 1)
     coord_lon = round(longitude, 1)
     nearest_diff = 5
@@ -45,6 +65,17 @@ def coords_to_city(latitude, longitude, zip_locs):
 
 
 def coords_to_state(latitude, longitude, zip_locs):
+    """
+    Converts lat/lon to state (US) in provided zip locations
+
+    Args:
+        latitude (float): Latitude for location to convert
+        longitude (float): Longitude for location to convert
+        zip_locs (list): List of dicts with lat/lon data for states
+
+    Returns:
+        str: State for coordinates
+    """
     coord_lat = round(latitude, 1)
     coord_lon = round(longitude, 1)
 
@@ -59,6 +90,17 @@ def coords_to_state(latitude, longitude, zip_locs):
 
 
 def coords_to_zip(latitude, longitude, zip_locs):
+    """
+    Converts lat/lon to zip code (US) in provided zip locations
+
+    Args:
+        latitude (float): Latitude for location to convert
+        longitude (float): Longitude for location to convert
+        zip_locs (list): List of dicts with lat/lon data for zip codes
+
+    Returns:
+        str: Zip code for coordinates. Returns blank string ('') if no match found.
+    """
     coord_lat = round(latitude, 1)
     coord_lon = round(longitude, 1)
 
@@ -278,6 +320,16 @@ def get_route(depart_coords, destination_coords):
 
 
 def get_zip_data():
+    """
+    Convienient loader for zip_codes and zip_locs references
+
+    Args:
+        none
+
+    Returns:
+        dict: Dict of zip codes with city, state, lat, and lon data
+        list: List of dicts with lat/lon, city, state, zip code data (and extranously dst, geopoint, and timezone)
+    """
     zip_codes = load_zip_codes()
     zip_locs = load_zip_locs()
 
@@ -285,24 +337,62 @@ def get_zip_data():
 
 
 def load_gridpoints():
+    """
+    Loads known gridpoints from pickle file for easier conversion to NWS API hourly URL
+
+    Args:
+        none
+
+    Returns:
+        dict: Gridpoint reference dict with keys 'lat', 'lon', and 'hourly_url'
+    """
     with open(f'weather_data/gridpoint_coords.pkl', 'rb') as file:
         data = pickle.load(file)
     return data
 
 
 def load_zip_codes():
+    """
+    Loads zip code data from pickle file
+
+    Args:
+        none
+
+    Returns:
+        dict: Dict of zip codes with city, state, lat, and lon data
+    """
     with open(f'weather_data/zip_codes.pkl', 'rb') as file:
         data = pickle.load(file)
     return data
 
 
 def load_zip_locs():
+    """
+    Loads zip location data from pickle file
+
+    Args:
+        none
+
+    Returns:
+        list: List of dicts with lat/lon, city, state, zip code data (and extranously dst, geopoint, and timezone)
+    """
     with open(f'weather_data/zip_locs.pkl', 'rb') as file:
         data = pickle.load(file)
     return data
 
 
 def popup_builder(checkpoint, loc_report, icon):
+    """
+    Builds Folium map marker and popup with provided weather data and icon
+
+    Args:
+        checkpoint(dict): Dict with checkpoint 'lat' and 'lon' for marker placement
+        loc_report(str): Short weather report string for popup
+        icon(str): File path to icon
+
+    Returns:
+        list: List of dicts with lat/lon, city, state, zip code data (and extranously dst, geopoint, and timezone)
+    """
     popup = folium.Marker(
     location=[checkpoint['lat'], checkpoint['lon']],
     popup=Popup(loc_report, min_width=100, max_width=300),
@@ -311,11 +401,31 @@ def popup_builder(checkpoint, loc_report, icon):
 
 
 def reset_gridpoints():
+    """
+    Reset known gridpoint reference list, overwriting current list with blank list.
+
+    Args:
+        none
+
+    Returns:
+        none
+    """
     blank_set = []
     add_gridpoints(blank_set)
 
 
 def set_hourly_forecast(city, hourly_data, hour):
+    """
+    Builds short weather report at specified hour
+
+    Args:
+        city(str): Dict with checkpoint 'lat' and 'lon' for marker placement
+        hourly_data(dict): NWS API hourly forecast data for location
+        hour(int): Hour of forecast to get (0 based)
+
+    Returns:
+        str: Short weather report with expected arrival time, city, forecast, temp and wind
+    """
     # Set time
     city_time = hourly_data['properties']['periods'][hour]['startTime'][11:16]
     # Set forecast, temp, and wind for specified hour index
@@ -331,6 +441,16 @@ def set_hourly_forecast(city, hourly_data, hour):
 
 
 def set_rw_icon(forecast, hour):
+    """
+    Determine icon to use based on NWS icon for specified hour of forecast
+
+    Args:
+        forecast(dict): NWS API hourly forecast data for location
+        hour(int): Hour of forecast to get (0 based)
+
+    Returns:
+        str: File path to icon
+    """
 
     icon_convert = {
         'skc-day': 'icons8-sun-50.png',
@@ -371,8 +491,8 @@ def set_rw_icon(forecast, hour):
         'dust': 'icons8-dust-50.png',
         'smoke': 'icons8-dust-50.png',
         'haze': 'icons8-haze-50.png',
-        'hot': 'icons8-box-important-50.png',
-        'cold': 'icons8-box-important-50.png',
+        'hot': 'icons8-box-important-red-50.png',
+        'cold': 'icons8-box-important-blue-50.png',
         'blizzard': 'icons8-box-important-50.png',
         'fog': 'icons8-haze-50.png',
     }
