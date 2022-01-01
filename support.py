@@ -319,6 +319,46 @@ def get_route(depart_coords, destination_coords):
     return route_data
 
 
+def get_route_weather(depart_coords, destination_coords):
+    """
+    Get weather for route between depart and destination coordinates
+
+    Args:
+        depart_coords (float): Coordinates for starting location
+        destination_coords (float): Coordinates for ending location
+        printing (bool): Controls if status updates are printed. Defaults to True
+
+    Returns:
+        dict: Route data from Open Route Service
+        list: List of dicts containing checkpoints with location and weather data
+    """
+
+    # Get zip codes and locations
+    zip_codes, zip_locs = get_zip_data()
+
+    # Get route data
+    route_data = get_route(depart_coords, destination_coords)
+
+    # Get checkpoint locations
+    checkpoints = find_checkpoints(route_data)
+
+    # Get hourly url
+    for cp in checkpoints:
+        hourly_url = get_hourly_url(cp['lat'], cp['lon'], True)
+        cp['hourly_url'] = hourly_url
+
+    # Get forecast
+    for cp in checkpoints:
+        forecast = get_forecast(cp['hourly_url'])
+        cp['forecast'] = forecast
+
+    # Set checkpoint cites
+    for cp in checkpoints:
+        cp['city'] = coords_to_city(cp['lat'], cp['lon'], zip_locs)
+
+    return(route_data, checkpoints)
+
+
 def get_zip_data():
     """
     Convienient loader for zip_codes and zip_locs references

@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>{% block title %} Get weather for your route:{% endblock %}</h1>
+    <form method="post">
+        <label for="start_zip">Start Zip Code</label>
+        <br>
+        <input type="text" name="start_zip_code"
+               placeholder="12345"
+               value="{{ request.form['start_zip_code'] }}"></input>
+        <br>
+
+        <label for="end_zip_code">End Zip Code</label>
+        <br>
+        <input type="text" name="end_zip_code"
+               placeholder="54321"
+               value="{{ request.form['end_zip_code'] }}"></input>
+        <br>
+
+        <label for="delay">Depart Delay (hours)</label>
+        <br>
+        <input type="text" name="delay"
+               placeholder="Not implemented"
+               value="{{ request.form['delay'] }}"></input>
+        <br>
+        <button type="submit">Submit</button>
+    </form>
+{% endblock %}

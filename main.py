@@ -12,7 +12,8 @@ Weather data by National Weather Service API
     Usage:
 
     Add config.py file with the following:
-        api_key = KEY
+        api_key = Open Route Service API key
+        flask_key = KEY
         local_run = True
 
     Start the flask server by running:
@@ -22,73 +23,54 @@ Weather data by National Weather Service API
         http://127.0.0.1:5000/?sz=55118&ez=57105
 
 """
-from flask import Flask
-from flask import request
+from flask import Flask, render_template, request, flash, redirect
 import folium
 
 from support import (
-    coords_to_city,
     find_checkpoints,
-    get_forecast,
-    get_hourly_url,
     get_zip_data,
     get_zip_data,
-    get_route,
+    get_route_weather,
     popup_builder,
     set_rw_icon,
     set_hourly_forecast,
     zip_to_coords,
 )
 
-from config import local_run
-
-# Primary process
-def get_route_weather(depart_coords, destination_coords):
-    """
-    Get weather for route between depart and destination coordinates
-
-    Args:
-        depart_coords (float): Coordinates for starting location
-        destination_coords (float): Coordinates for ending location
-        printing (bool): Controls if status updates are printed. Defaults to True
-
-    Returns:
-        dict: Route data from Open Route Service
-        list: List of dicts containing checkpoints with location and weather data
-    """
-
-    # Get zip codes and locations
-    zip_codes, zip_locs = get_zip_data()
-
-    # Get route data
-    route_data = get_route(depart_coords, destination_coords)
-
-    # Get checkpoint locations
-    checkpoints = find_checkpoints(route_data)
-
-    # Get hourly url
-    for cp in checkpoints:
-        hourly_url = get_hourly_url(cp['lat'], cp['lon'], True)
-        cp['hourly_url'] = hourly_url
-
-    # Get forecast
-    for cp in checkpoints:
-        forecast = get_forecast(cp['hourly_url'])
-        cp['forecast'] = forecast
-
-    # Set checkpoint cites
-    for cp in checkpoints:
-        cp['city'] = coords_to_city(cp['lat'], cp['lon'], zip_locs)
-
-    return(route_data, checkpoints)
+from config import local_run, flask_key
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = flask_key
+routes = []
 
-@app.route('/')
+
+@app.route('/', methods=('GET', 'POST'))
+def index():
+    if request.method == 'POST':
+        start_zip = request.form['start_zip_code']
+        end_zip = request.form['end_zip_code']
+        delay = request.form['delay']
+
+        if not start_zip:
+            flash('Start zip code required')
+        elif not end_zip:
+            flash('End zip code required')
+        elif not delay:
+            flash('Delay required')
+        else:
+            routes.append({'start_zip': start_zip, 'end_zip': end_zip, 'delay': delay})
+            route_url = f"/map/?sz={start_zip}&ez={end_zip}&d={delay}"
+            return redirect(route_url)
+
+    return render_template('index.html')
+
+
+@app.route('/map/')
 def run_rw():
-    # Get start and end zip codes from URL arguments
     depart_zip = request.args.get('sz')
     destination_zip = request.args.get('ez')
+
+    print(f'sz - {depart_zip}\nez - {destination_zip}')
 
     # Get zip codes and locations
     zip_codes, zip_locs = get_zip_data()
