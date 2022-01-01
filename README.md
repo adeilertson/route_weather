@@ -12,11 +12,12 @@ Weather data by National Weather Service API
 Usage:
 
 Add config.py file with the following:  
-    api_key = KEY  
+    api_key = Open Route Service API key  
+    flask_key = KEY  
     local_run = True  
 
 Start the flask server by running:  
     $ python main.py  
 
 Open web browser and go to the sample route:  
-    http://127.0.0.1:5000/?sz=55118&ez=57105  
+    http://127.0.0.1:5000/map/?sz=55118&ez=57105  
