@@ -33,8 +33,13 @@ def get_nws_forecast(hourly_url):
         res = requests.get(hourly_url, headers=headers)
         if res.json()['type'] != 'Feature':
             if attempts > 2:
-                print(f"Unable to get forcast - {hourly_url}")
+                try:
+                    error = {res.json()['title']}
+                except IndexError:
+                    error = "Unexpected Error (No NWS response title)"
+                print(f"Unable to get forcast - {error} {hourly_url}")
                 collecting = False
+                return(None)
             else:
                 time.sleep(10)
                 attempts += 1
@@ -120,6 +125,6 @@ def get_ors_route(depart_coords, destination_coords):
         route_data = call.json()
     except JSONDecodeError:
         route_data = call.content
-        print(f"Error getting route. Call returned {call.content}")
+        print(f"Error getting route for {depart_coords} - {destination_coords}")
 
     return route_data
