@@ -26,15 +26,15 @@ Weather data by National Weather Service API
 from flask import Flask, render_template, request, flash, redirect
 import folium
 
+from converters import zip_to_coords
+from data_loaders import get_zip_data
+
 from support import (
     find_checkpoints,
-    get_zip_data,
-    get_zip_data,
     get_route_weather,
     popup_builder,
     set_rw_icon,
     set_hourly_forecast,
-    zip_to_coords,
 )
 
 from config import local_run, flask_key

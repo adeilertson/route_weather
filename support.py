@@ -1,4 +1,3 @@
-
 """
 Route Weather Support Functions
 
@@ -6,112 +5,11 @@ Author: Andrew Eilertson
 Created: May 21st 2021
 URL: https://github.com/adeilertson/route_weather
 """
-
-from json.decoder import JSONDecodeError
-import requests
-import time
-import pickle
 import folium
 from folium.map import Popup
-
-from config import api_key
-
-def add_gridpoints(data):
-    """
-    Adds new gridpoints to known gridpoints for future reference.
-
-    Args:
-        data (dict): Gridpoint reference dict with keys 'lat', 'lon', and 'hourly_url'
-
-    Returns:
-        none
-    """
-    with open(f'weather_data/gridpoint_coords.pkl', 'wb') as file:
-        pickle.dump(data, file)
-
-
-def coords_to_city(latitude, longitude, zip_locs):
-    """
-    Converts lat/lon to city (US) in provided zip locations
-
-    Args:
-        latitude (float): Latitude for location to convert
-        longitude (float): Longitude for location to convert
-        zip_locs (list): List of dicts with lat/lon data for cities
-
-    Returns:
-        str: Nearest city for coordinates
-    """
-    coord_lat = round(latitude, 1)
-    coord_lon = round(longitude, 1)
-    nearest_diff = 5
-
-    for loc in zip_locs:
-        if round(loc['latitude'], 1) == coord_lat and round(loc['longitude'], 1) == coord_lon:
-            city = loc['city']
-            break
-    else:
-        for loc in zip_locs:
-            # Find distance between checkpoint coords and city coords
-            la_diff = abs(round(loc['latitude'], 1) - coord_lat)
-            lo_diff = abs(round(loc['longitude'], 1) - coord_lon)
-            coord_diff = la_diff + lo_diff
-            # Check if city is closer than current nearest city
-            if nearest_diff > coord_diff:
-                city = loc['city']
-                nearest_diff = coord_diff
-
-    return(city)
-
-
-def coords_to_state(latitude, longitude, zip_locs):
-    """
-    Converts lat/lon to state (US) in provided zip locations
-
-    Args:
-        latitude (float): Latitude for location to convert
-        longitude (float): Longitude for location to convert
-        zip_locs (list): List of dicts with lat/lon data for states
-
-    Returns:
-        str: State for coordinates
-    """
-    coord_lat = round(latitude, 1)
-    coord_lon = round(longitude, 1)
-
-    for loc in zip_locs:
-        if round(loc['latitude'], 1) == coord_lat and round(loc['longitude'], 1) == coord_lon:
-            state = loc['state']
-            break
-    else:
-        state = ''
-
-    return(state)
-
-
-def coords_to_zip(latitude, longitude, zip_locs):
-    """
-    Converts lat/lon to zip code (US) in provided zip locations
-
-    Args:
-        latitude (float): Latitude for location to convert
-        longitude (float): Longitude for location to convert
-        zip_locs (list): List of dicts with lat/lon data for zip codes
-
-    Returns:
-        str: Zip code for coordinates. Returns blank string ('') if no match found.
-    """
-    coord_lat = round(latitude, 1)
-    coord_lon = round(longitude, 1)
-
-    for loc in zip_locs:
-        if round(loc['latitude'], 1) == coord_lat and round(loc['longitude'], 1) == coord_lon:
-            zip_code = loc['zip']
-            break
-    else:
-        zip_code = ''
-
-    return(zip_code)
+from api_callers import get_ors_route, get_nws_hourly_url, get_nws_forecast
+from converters import coords_to_city
+from data_loaders import get_zip_data
 
 
 def find_checkpoints(route_data, interval=3600, midpoint=False):
@@ -204,121 +102,6 @@ def find_checkpoints(route_data, interval=3600, midpoint=False):
     return(checkpoints)
 
 
-def get_forecast(hourly_url):
-    """
-    Runs NWS API call to get hourly weather forecast for provided URL
-
-    Args:
-        hourly_url (str): NWS hourly forecast URL
-
-    Returns:
-        dict: Hourly forecast data converted from json
-    """
-    headers = {
-        'User-Agent': 'adeilertson@gmail.com',
-        'From': 'adeilertson@gmail.com'
-        }
-    attempts = 0
-    # Inter-checkpoint pause
-    time.sleep(.5)
-    collecting = True
-    while collecting is True:
-        res = requests.get(hourly_url, headers=headers)
-        if res.json()['type'] != 'Feature':
-            if attempts > 2:
-                print(f"Unable to get forcast - {hourly_url}")
-                collecting = False
-            else:
-                time.sleep(10)
-                attempts += 1
-        else:
-            forecast = res.json()
-            collecting = False
-            return(forecast)
-
-
-def get_hourly_url(lat, lon, printing=False):
-    """
-    Gets NWS API hourly forecast URL from provided coordinates
-
-    Args:
-        lat (float): Latatude as float
-        lon (float): Longitude as float
-
-    Returns:
-        str: NWS API hourly URL
-    """
-    # Check if coords have known gridpoint
-    gridpoints = load_gridpoints()
-
-    for point in gridpoints:
-        if point['lat'] == f"{lat:.3f}" and point['lon'] == f"{lon:.3f}":
-            forecast_url = point['hourly_forecast_url']
-            if printing is True:
-                print(f"Known Entry - Coords: {lat:.3f},{lon:.3f} - URL: {forecast_url}")
-            return(forecast_url)
-    else:
-        headers = {
-            'User-Agent': 'adeilertson@gmail.com',
-            'From': 'adeilertson@gmail.com'
-            }
-        url = f"https://api.weather.gov/points/{lat:.3f},{lon:.3f}"
-        res = requests.get(url, headers=headers)
-        res_data = res.json()
-        forecast_url = res_data['properties']['forecastHourly']
-        if printing is True:
-            print(f"New Entry - Coords: {lat:.3f},{lon:.3f} - URL: {forecast_url}")
-
-        # Update gridpoint reference
-        new_entry = {
-            'lat': f"{lat:.3f}",
-            'lon': f"{lon:.3f}",
-            'hourly_forecast_url': forecast_url
-        }
-        gridpoints.append(new_entry)
-        add_gridpoints(gridpoints)
-
-
-        return(forecast_url)
-
-
-def get_route(depart_coords, destination_coords):
-    """Runs Open Route Service API call to get route information between two sets of coordinates
-
-    Args:
-        depart_coords (list):
-        destination_coords (list):
-
-    Returns:
-        route_data: Dict from json with route data from api call
-    """
-    # Sample generated code from Open Route Service
-    # Body of request
-    # coordinates is list of lon/lat formatted coords in separate lists
-    body = {
-        "coordinates": [depart_coords,destination_coords],
-        "radiuses": [-1,-1]
-    }
-    # Headers
-    # authorization is personal API key
-    headers = {
-        'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
-        'Authorization': api_key,
-        'Content-Type': 'application/json; charset=utf-8'
-    }
-
-    # Call
-    # Returns geojson object
-    call = requests.post('https://api.openrouteservice.org/v2/directions/driving-car/geojson', json=body, headers=headers)
-    try:
-        route_data = call.json()
-    except JSONDecodeError:
-        route_data = call.content
-        print(f"Error getting route. Call returned {call.content}")
-
-    return route_data
-
-
 def get_route_weather(depart_coords, destination_coords):
     """
     Get weather for route between depart and destination coordinates
@@ -337,19 +120,19 @@ def get_route_weather(depart_coords, destination_coords):
     zip_codes, zip_locs = get_zip_data()
 
     # Get route data
-    route_data = get_route(depart_coords, destination_coords)
+    route_data = get_ors_route(depart_coords, destination_coords)
 
     # Get checkpoint locations
     checkpoints = find_checkpoints(route_data)
 
     # Get hourly url
     for cp in checkpoints:
-        hourly_url = get_hourly_url(cp['lat'], cp['lon'], True)
+        hourly_url = get_nws_hourly_url(cp['lat'], cp['lon'], True)
         cp['hourly_url'] = hourly_url
 
     # Get forecast
     for cp in checkpoints:
-        forecast = get_forecast(cp['hourly_url'])
+        forecast = get_nws_forecast(cp['hourly_url'])
         cp['forecast'] = forecast
 
     # Set checkpoint cites
@@ -357,68 +140,6 @@ def get_route_weather(depart_coords, destination_coords):
         cp['city'] = coords_to_city(cp['lat'], cp['lon'], zip_locs)
 
     return(route_data, checkpoints)
-
-
-def get_zip_data():
-    """
-    Convienient loader for zip_codes and zip_locs references
-
-    Args:
-        none
-
-    Returns:
-        dict: Dict of zip codes with city, state, lat, and lon data
-        list: List of dicts with lat/lon, city, state, zip code data (and extranously dst, geopoint, and timezone)
-    """
-    zip_codes = load_zip_codes()
-    zip_locs = load_zip_locs()
-
-    return(zip_codes, zip_locs)
-
-
-def load_gridpoints():
-    """
-    Loads known gridpoints from pickle file for easier conversion to NWS API hourly URL
-
-    Args:
-        none
-
-    Returns:
-        dict: Gridpoint reference dict with keys 'lat', 'lon', and 'hourly_url'
-    """
-    with open(f'weather_data/gridpoint_coords.pkl', 'rb') as file:
-        data = pickle.load(file)
-    return data
-
-
-def load_zip_codes():
-    """
-    Loads zip code data from pickle file
-
-    Args:
-        none
-
-    Returns:
-        dict: Dict of zip codes with city, state, lat, and lon data
-    """
-    with open(f'weather_data/zip_codes.pkl', 'rb') as file:
-        data = pickle.load(file)
-    return data
-
-
-def load_zip_locs():
-    """
-    Loads zip location data from pickle file
-
-    Args:
-        none
-
-    Returns:
-        list: List of dicts with lat/lon, city, state, zip code data (and extranously dst, geopoint, and timezone)
-    """
-    with open(f'weather_data/zip_locs.pkl', 'rb') as file:
-        data = pickle.load(file)
-    return data
 
 
 def popup_builder(checkpoint, loc_report, icon):
@@ -438,20 +159,6 @@ def popup_builder(checkpoint, loc_report, icon):
     popup=Popup(loc_report, min_width=100, max_width=300),
     icon=icon)
     return(popup)
-
-
-def reset_gridpoints():
-    """
-    Reset known gridpoint reference list, overwriting current list with blank list.
-
-    Args:
-        none
-
-    Returns:
-        none
-    """
-    blank_set = []
-    add_gridpoints(blank_set)
 
 
 def set_hourly_forecast(city, hourly_data, hour):
@@ -491,7 +198,7 @@ def set_rw_icon(forecast, hour):
     Returns:
         str: File path to icon
     """
-
+    # Conversion dict
     icon_convert = {
         'skc-day': 'icons8-sun-50.png',
         'sct-day': 'icons8-partly-cloudy-day-50.png',
@@ -554,7 +261,6 @@ def set_rw_icon(forecast, hour):
         'wink_bkn',
     ]
 
-
     if icon_code in time_sensitive_icon_codes:
         if is_day is True:
             icon_code = f"{icon_code}-day"
@@ -567,22 +273,3 @@ def set_rw_icon(forecast, hour):
     i8_icon = folium.features.CustomIcon(f'weather_data/icons/{icon_name}', icon_size=(24, 24), icon_anchor=(10,30))
 
     return(i8_icon)
-
-
-def zip_to_coords(zip_code, zip_code_refs):
-    """Attempts to convert zip code to coordinates
-
-    Args:
-        zip_code (str): Zip code to be converted
-        zip_code_refs (dict): Zip code reference dictionary
-
-    Returns:
-        zip_coords: None if not in dict or List of two integers representing coordniates
-    """
-    try:
-        zip_data = zip_code_refs[zip_code]
-        zip_coords = [zip_data['longitude'], zip_data['latitude']]
-    except KeyError:
-        zip_coords = None
-
-    return zip_coords
