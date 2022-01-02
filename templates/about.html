@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>{% block title %} Route Weather {% endblock %}</h1>
+        <div class='about'>
+            <p>
+                Flask web app to get weather along your route<br>
+                <br>
+                Author: Andrew Eilertson<br>
+                Created: May 21st 2021<br>
+                URL: https://github.com/adeilertson/route_weather<br>
+                <br>
+                Icons by Icons8<br>
+                Routing by Open Route Service<br>
+                Weather data by National Weather Service API<br>
+            </p>
+            <p>Version: {{ version }}</p>
+        </div>
+{% endblock %}

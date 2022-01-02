@@ -37,7 +37,7 @@ from support import (
     set_hourly_forecast,
 )
 
-from config import local_run, flask_key
+from config import local_run, flask_key, version
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = flask_key
@@ -63,6 +63,11 @@ def index():
             return redirect(route_url)
 
     return render_template('index.html')
+
+
+@app.route('/about/')
+def about():
+    return render_template('about.html', version=version)
 
 
 @app.route('/map/')
