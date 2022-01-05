@@ -258,7 +258,7 @@ def set_rw_icon(forecast, hour):
         'wind_skc',
         'wind_few',
         'wind_sct',
-        'wink_bkn',
+        'wind_bkn',
     ]
 
     if icon_code in time_sensitive_icon_codes:
