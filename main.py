@@ -74,8 +74,7 @@ def about():
 def run_rw():
     depart_zip = request.args.get('sz')
     destination_zip = request.args.get('ez')
-
-    print(f'sz - {depart_zip}\nez - {destination_zip}')
+    delay = int(request.args.get('d'))
 
     # Get zip codes and locations
     zip_codes, zip_locs = get_zip_data()
@@ -99,7 +98,7 @@ def run_rw():
     folium.LayerControl().add_to(map)
 
     # Add checkpoints to map
-    for hour, cp in enumerate(checkpoints):
+    for hour, cp in enumerate(checkpoints, start=delay):
         loc_report = set_hourly_forecast(cp['city'], cp['forecast'], hour)
         icon = set_rw_icon(cp['forecast'], hour)
         cp_popup = popup_builder(cp, loc_report, icon)
