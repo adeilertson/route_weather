@@ -25,31 +25,23 @@ def get_nws_forecast(hourly_url):
         'User-Agent': 'adeilertson@gmail.com',
         'From': 'adeilertson@gmail.com'
         }
-    attempts = 0
     # Inter-checkpoint pause
     time.sleep(.5)
-    collecting = True
-    while collecting is True:
-        res = requests.get(hourly_url, headers=headers)
-        if res.json()['type'] != 'Feature':
-            if attempts > 2:
-                try:
-                    error = {res.json()['title']}
-                except IndexError:
-                    error = "Unexpected Error (No NWS response title)"
-                print(f"Unable to get forcast - {error} {hourly_url}")
-                collecting = False
-                return(None)
-            else:
-                time.sleep(10)
-                attempts += 1
-        else:
-            forecast = res.json()
-            collecting = False
-            return(forecast)
+    res = requests.get(hourly_url, headers=headers)
+    forecast = res.json()
+    if 'type' in forecast.keys():
+        forecast['error'] = False
+        return(forecast)
+    elif 'title' in forecast.keys():
+        forecast['error'] = True
+        forecast['error_msg'] = forecast['title']
+    else:
+        forecast['error'] = True
+        forecast['error_message'] = 'Unknown NWS API Error'
 
 
-def get_nws_hourly_url(lat, lon, printing=False):
+
+def get_nws_hourly_url(lat, lon):
     """
     Gets NWS API hourly forecast URL from provided coordinates
 
@@ -66,8 +58,6 @@ def get_nws_hourly_url(lat, lon, printing=False):
     for point in gridpoints:
         if point['lat'] == f"{lat:.3f}" and point['lon'] == f"{lon:.3f}":
             forecast_url = point['hourly_forecast_url']
-            if printing is True:
-                print(f"Known Entry - Coords: {lat:.3f},{lon:.3f} - URL: {forecast_url}")
             return(forecast_url)
     else:
         headers = {
@@ -77,20 +67,21 @@ def get_nws_hourly_url(lat, lon, printing=False):
         url = f"https://api.weather.gov/points/{lat:.3f},{lon:.3f}"
         res = requests.get(url, headers=headers)
         res_data = res.json()
-        forecast_url = res_data['properties']['forecastHourly']
-        if printing is True:
-            print(f"New Entry - Coords: {lat:.3f},{lon:.3f} - URL: {forecast_url}")
-
-        # Update gridpoint reference
-        new_entry = {
-            'lat': f"{lat:.3f}",
-            'lon': f"{lon:.3f}",
-            'hourly_forecast_url': forecast_url
-        }
-        gridpoints.append(new_entry)
-        add_gridpoints(gridpoints)
-
-        return(forecast_url)
+        if 'properties' in res_data.keys():
+            forecast_url = res_data['properties']['forecastHourly']
+            # Update gridpoint reference
+            new_entry = {
+                'lat': f"{lat:.3f}",
+                'lon': f"{lon:.3f}",
+                'hourly_forecast_url': forecast_url
+            }
+            gridpoints.append(new_entry)
+            add_gridpoints(gridpoints)
+            return(forecast_url)
+        elif 'title' in res_data.keys():
+            return(None)
+        else:
+            return(None)
 
 
 def get_ors_route(depart_coords, destination_coords):
@@ -123,8 +114,12 @@ def get_ors_route(depart_coords, destination_coords):
     call = requests.post('https://api.openrouteservice.org/v2/directions/driving-car/geojson', json=body, headers=headers)
     try:
         route_data = call.json()
+        route_data['error'] = False
+        route_data['error_msg'] = ''
     except JSONDecodeError:
-        route_data = call.content
-        print(f"Error getting route for {depart_coords} - {destination_coords}")
+        route_data = {
+            'error': True,
+            'error_msg': 'ORS Routing Error'
+        }
 
-    return route_data
+    return(route_data)

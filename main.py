@@ -23,7 +23,7 @@ Weather data by National Weather Service API
         http://127.0.0.1:5000/?sz=55118&ez=57105
 
 """
-from flask import Flask, render_template, request, flash, redirect
+from flask import Flask, render_template, request, flash, redirect, url_for
 import folium
 
 from converters import zip_to_coords
@@ -69,12 +69,26 @@ def index():
 def about():
     return render_template('about.html', version=version)
 
+@app.route('/error/<error>')
+def error_page(error):
+    error_list = {
+        'depart_zip': 'Unable to map depart zip. Please verify the zip or try a zip closer to larger city',
+        'destination_zip': 'Unable to map destination zip. Please verify the zip or try a zip closer to larger city',
+        'delay_type': 'Delay required to be number',
+        'ors_routing': 'Error getting route from OpenRouteService',
+    }
+    
+    if error in error_list.keys():
+        error_msg = error_list[error]
+    else:
+        error_msg = 'Unknown error'
+    return render_template('error.html', error_msg=error_msg)
 
 @app.route('/map/')
 def run_rw():
     depart_zip = request.args.get('sz')
     destination_zip = request.args.get('ez')
-    delay = int(request.args.get('d'))
+    delay = request.args.get('d')
 
     # Get zip codes and locations
     zip_codes, zip_locs = get_zip_data()
@@ -82,8 +96,26 @@ def run_rw():
     depart_coords = zip_to_coords(depart_zip, zip_codes)
     destination_coords = zip_to_coords(destination_zip, zip_codes)
 
+    # Data verification
+    if depart_coords is None:
+        error = 'depart_zip'
+        return redirect(url_for('error_page', error=error))
+    elif destination_coords is None:
+        error = 'destination_zip'
+        return redirect(url_for('error_page', error=error))
+    
+    try:
+        delay = int(delay)
+    except ValueError:
+        error = 'delay_type'
+        return redirect(url_for('error_page', error=error))
+
     # Get route data and checkpoints
     route, checkpoints = get_route_weather(depart_coords, destination_coords)
+    # Error check
+    if route['error'] is True:
+        error = 'ors_routing'
+        return redirect(url_for('error_page', error=error))
 
     # Get midpoint of route to focus map
     midpoint = find_checkpoints(route, midpoint=True)[0]
@@ -99,8 +131,12 @@ def run_rw():
 
     # Add checkpoints to map
     for hour, cp in enumerate(checkpoints, start=delay):
-        loc_report = set_hourly_forecast(cp['city'], cp['forecast'], hour)
-        icon = set_rw_icon(cp['forecast'], hour)
+        if cp['error'] is False:
+            loc_report = set_hourly_forecast(cp['city'], cp['forecast'], hour)
+            icon = set_rw_icon(cp['forecast'], hour)
+        else:
+            loc_report = cp['error_msg']
+            icon = set_rw_icon('error', 0)
         cp_popup = popup_builder(cp, loc_report, icon)
         cp_popup.add_to(map)
 

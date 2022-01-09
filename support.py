@@ -58,6 +58,8 @@ def find_checkpoints(route_data, interval=3600, midpoint=False):
         new_checkpoint = {
             'lat': route_points[0][1],
             'lon': route_points[0][0],
+            'error': False,
+            'error_msg': ''
         }
         checkpoints.append(new_checkpoint)
 
@@ -82,6 +84,8 @@ def find_checkpoints(route_data, interval=3600, midpoint=False):
             new_checkpoint = {
                 'lat': coord[1],
                 'lon': coord[0],
+                'error': False,
+                'error_msg': '',
                 }
             checkpoints.append(new_checkpoint)
             if midpoint is True:
@@ -96,6 +100,8 @@ def find_checkpoints(route_data, interval=3600, midpoint=False):
     new_checkpoint = {
         'lat': route_points[-1][1],
         'lon': route_points[-1][0],
+        'error': False,
+        'error_msg': ''
     }
     checkpoints[-1] = new_checkpoint
 
@@ -121,19 +127,31 @@ def get_route_weather(depart_coords, destination_coords):
 
     # Get route data
     route_data = get_ors_route(depart_coords, destination_coords)
+    # Error check
+    if route_data['error'] is True:
+        checkpoints = []
+        return(route_data, checkpoints)
 
     # Get checkpoint locations
     checkpoints = find_checkpoints(route_data)
 
     # Get hourly url
     for cp in checkpoints:
-        hourly_url = get_nws_hourly_url(cp['lat'], cp['lon'], True)
+        hourly_url = get_nws_hourly_url(cp['lat'], cp['lon'])
+        # Check for error
+        if hourly_url is None:
+            cp['error'] = True
+            cp['error_msg'] = 'No hourly url'
         cp['hourly_url'] = hourly_url
 
     # Get forecast
     for cp in checkpoints:
         forecast = get_nws_forecast(cp['hourly_url'])
         cp['forecast'] = forecast
+        # Check for error
+        if forecast['error'] is True:
+            cp['error'] = True
+            cp['error_msg'] = forecast['error_msg']
 
     # Set checkpoint cites
     for cp in checkpoints:
@@ -200,6 +218,7 @@ def set_rw_icon(forecast, hour):
     """
     # Conversion dict
     icon_convert = {
+        'error': 'icons8-error-50.png',
         'skc-day': 'icons8-sun-50.png',
         'sct-day': 'icons8-partly-cloudy-day-50.png',
         'bkn-day': 'icons8-partly-cloudy-day-50.png',
@@ -244,10 +263,18 @@ def set_rw_icon(forecast, hour):
         'fog': 'icons8-haze-50.png',
     }
 
-    # Built in FA icon selection
+    # Error check
+    if forecast == 'error':
+        icon_name = icon_convert['error']
+        i8_icon = folium.features.CustomIcon(f'weather_data/icons/{icon_name}', icon_size=(24, 24), icon_anchor=(10,30))
+        return(i8_icon)
+
+    # Get icon link from forecast
     icon_url = forecast['properties']['periods'][hour]['icon']
+    # Get day/night data from forecast
     is_day = forecast['properties']['periods'][hour]['isDaytime']
 
+    # Parse icon code from url
     icon_code = icon_url.split('/')[6].split('?')[0].split(',')[0]
 
     time_sensitive_icon_codes = [
@@ -261,15 +288,17 @@ def set_rw_icon(forecast, hour):
         'wind_bkn',
     ]
 
+    # Set day/night icons
     if icon_code in time_sensitive_icon_codes:
         if is_day is True:
             icon_code = f"{icon_code}-day"
         else:
             icon_code = f"{icon_code}-night"
 
+    # Get icon file location
     icon_name = icon_convert[icon_code]
 
-    # Local icon selection
+    # Set icon data
     i8_icon = folium.features.CustomIcon(f'weather_data/icons/{icon_name}', icon_size=(24, 24), icon_anchor=(10,30))
 
     return(i8_icon)
