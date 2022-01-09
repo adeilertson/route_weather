@@ -75,6 +75,7 @@ def error_page(error):
         'depart_zip': 'Unable to map depart zip. Please verify the zip or try a zip closer to larger city',
         'destination_zip': 'Unable to map destination zip. Please verify the zip or try a zip closer to larger city',
         'delay_type': 'Delay required to be number',
+        'delay_range': 'Delay required to be between 0 - 155',
         'ors_routing': 'Error getting route from OpenRouteService',
     }
 
@@ -108,6 +109,10 @@ def run_rw():
         delay = int(delay)
     except ValueError:
         error = 'delay_type'
+        return redirect(url_for('error_page', error=error))
+
+    if delay not in range(0,156):
+        error = 'delay_range'
         return redirect(url_for('error_page', error=error))
 
     # Get route data and checkpoints
