@@ -77,7 +77,7 @@ def error_page(error):
         'delay_type': 'Delay required to be number',
         'ors_routing': 'Error getting route from OpenRouteService',
     }
-    
+
     if error in error_list.keys():
         error_msg = error_list[error]
     else:
@@ -131,6 +131,10 @@ def run_rw():
 
     # Add checkpoints to map
     for hour, cp in enumerate(checkpoints, start=delay):
+        # Time in forecast check
+        if hour > 155:
+            cp['error'] = True
+            cp['error_msg'] = 'No weather data for time period'
         if cp['error'] is False:
             loc_report = set_hourly_forecast(cp['city'], cp['forecast'], hour)
             icon = set_rw_icon(cp['forecast'], hour)
