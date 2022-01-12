@@ -8,6 +8,7 @@ URL: https://github.com/adeilertson/route_weather
 import time
 import requests
 from json.decoder import JSONDecodeError
+import logging
 from data_loaders import add_gridpoints, load_gridpoints
 from config import api_key
 
@@ -29,16 +30,20 @@ def get_nws_forecast(hourly_url):
     time.sleep(.5)
     res = requests.get(hourly_url, headers=headers)
     forecast = res.json()
-    if 'type' in forecast.keys():
-        forecast['error'] = False
-        return(forecast)
-    elif 'title' in forecast.keys():
+    if 'title' in forecast.keys():
         forecast['error'] = True
         forecast['error_msg'] = forecast['title']
+        logging.error(f"Problem getting weather for {hourly_url} - {forecast['title']}")
+    elif 'type' in forecast.keys():
+        forecast['error'] = False
+        forecast['error_msg'] = ''
+        return(forecast)
     else:
         forecast['error'] = True
         forecast['error_message'] = 'Unknown NWS API Error'
+        logging.error(f"Problem getting weather for {hourly_url} - Unknown NWS API Error")
 
+    return(forecast)
 
 
 def get_nws_hourly_url(lat, lon):
@@ -79,9 +84,11 @@ def get_nws_hourly_url(lat, lon):
             add_gridpoints(gridpoints)
             return(forecast_url)
         elif 'title' in res_data.keys():
+            logging.error(f"Problem getting hourly NWS url for Lat/Lon: {lat}/{lon} - {res_data['title']}")
             return(None)
         else:
             return(None)
+            logging.error(f"Problem getting hourly NWS url for Lat/Lon: {lat}/{lon} - Unknown Error")
 
 
 def get_ors_route(depart_coords, destination_coords):

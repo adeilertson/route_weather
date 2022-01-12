@@ -25,6 +25,7 @@ Weather data by National Weather Service API
 """
 from flask import Flask, render_template, request, flash, redirect, url_for
 import folium
+import logging
 
 from converters import zip_to_coords
 from data_loaders import get_zip_data
@@ -43,6 +44,8 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = flask_key
 routes = []
 
+# Logger setup
+logging.basicConfig(filename='data.log', format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 @app.route('/', methods=('GET', 'POST'))
 def index():
@@ -100,19 +103,23 @@ def run_rw():
     # Data verification
     if depart_coords is None:
         error = 'depart_zip'
+        logging.info(f"ERROR - {depart_zip} {destination_zip} {delay} {error}")
         return redirect(url_for('error_page', error=error))
     elif destination_coords is None:
         error = 'destination_zip'
+        logging.info(f"ERROR - {depart_zip} {destination_zip} {delay} {error}")
         return redirect(url_for('error_page', error=error))
     
     try:
         delay = int(delay)
     except ValueError:
         error = 'delay_type'
+        logging.info(f"ERROR - {depart_zip} {destination_zip} {delay} {error}")
         return redirect(url_for('error_page', error=error))
 
     if delay not in range(0,156):
         error = 'delay_range'
+        logging.info(f"ERROR - {depart_zip} {destination_zip} {delay} {error}")
         return redirect(url_for('error_page', error=error))
 
     # Get route data and checkpoints
@@ -120,6 +127,7 @@ def run_rw():
     # Error check
     if route['error'] is True:
         error = 'ors_routing'
+        logging.info(f"ERROR - {depart_zip} {destination_zip} {delay} {error}")
         return redirect(url_for('error_page', error=error))
 
     # Get midpoint of route to focus map
@@ -149,6 +157,8 @@ def run_rw():
         cp_popup = popup_builder(cp, loc_report, icon)
         cp_popup.add_to(map)
 
+    # Log request
+    logging.info(f"Request successful - {depart_zip} {destination_zip} {delay}")
     return map._repr_html_()
 
 if local_run is True:

@@ -6,6 +6,8 @@ Created: May 21st 2021
 URL: https://github.com/adeilertson/route_weather
 """
 
+import logging
+
 def coords_to_city(latitude, longitude, zip_locs):
     """
     Converts lat/lon to city (US) in provided zip locations
@@ -60,6 +62,7 @@ def coords_to_state(latitude, longitude, zip_locs):
             state = loc['state']
             break
     else:
+        logging.error(f"Unable to get state for Lat/Lon: {latitude}/{longitude}")
         state = ''
 
     return(state)
@@ -85,6 +88,7 @@ def coords_to_zip(latitude, longitude, zip_locs):
             zip_code = loc['zip']
             break
     else:
+        logging.error(f"Unable to get zip for Lat/Lon: {latitude}/{longitude}")
         zip_code = ''
 
     return(zip_code)
@@ -104,6 +108,7 @@ def zip_to_coords(zip_code, zip_code_refs):
         zip_data = zip_code_refs[zip_code]
         zip_coords = [zip_data['longitude'], zip_data['latitude']]
     except KeyError:
+        logging.error(f"Unable to get coords from zip: {zip_code}")
         zip_coords = None
 
     return zip_coords
