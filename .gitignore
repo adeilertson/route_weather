@@ -1,6 +1,7 @@
 # Custom Route Weather files
 config.py
 notes.txt
+*.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
