@@ -139,7 +139,14 @@ def get_ors_route(depart_coords, destination_coords):
 
     # Call
     # Returns geojson object
-    call = requests.post('https://api.openrouteservice.org/v2/directions/driving-car/geojson', json=body, headers=headers)
+    try:
+        call = requests.post('https://api.openrouteservice.org/v2/directions/driving-car/geojson', json=body, headers=headers)
+    except Exception:
+        route_data = {
+            'error': True,
+            'error_msg': 'ORS Routing Request Error'
+        }
+        return(route_data)
     try:
         route_data = call.json()
         route_data['error'] = False

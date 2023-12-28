@@ -79,13 +79,16 @@ def error_page(error):
         'destination_zip': 'Unable to map destination zip. Please verify the zip or try a zip closer to larger city',
         'delay_type': 'Delay required to be number',
         'delay_range': 'Delay required to be between 0 - 155',
-        'ors_routing': 'Error getting route from OpenRouteService',
+        'ors_routing': 'Error getting route from OpenRouteService. Ensure API key is correct.',
+        'no_forecast_data': 'No forecast data returned for any checkpoint. Verify internet connection and NWS API availability.'
     }
 
+    # Set error message
     if error in error_list.keys():
         error_msg = error_list[error]
     else:
         error_msg = 'Unknown error'
+
     return render_template('error.html', error_msg=error_msg)
 
 @app.route('/map/')
@@ -124,9 +127,17 @@ def run_rw():
 
     # Get route data and checkpoints
     route, checkpoints = get_route_weather(depart_coords, destination_coords)
-    # Error check
+    # Route error check
     if route['error'] is True:
         error = 'ors_routing'
+        logging.info(f"ERROR - {depart_zip} {destination_zip} {delay} {error}")
+        return redirect(url_for('error_page', error=error))
+    
+    # Forecast error check
+    # Check if all checkpoints return error
+    if len([cp['error'] for cp in checkpoints if cp['error'] is True]) == len(checkpoints):
+        error = 'no_forecast_data'
+        body = '\n'.join([cp['hourly_url'] for cp in checkpoints])
         logging.info(f"ERROR - {depart_zip} {destination_zip} {delay} {error}")
         return redirect(url_for('error_page', error=error))
 
