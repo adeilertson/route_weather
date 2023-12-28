@@ -28,19 +28,40 @@ def get_nws_forecast(hourly_url):
         }
     # Inter-checkpoint pause
     time.sleep(.5)
+    # Get result from NWS API
     res = requests.get(hourly_url, headers=headers)
-    forecast = res.json()
+
+    # Parse result as json
+    try:
+        forecast = res.json()
+    except JSONDecodeError as err:
+        forecast = {}
+        logging.error(f"JSON decode error for {hourly_url}")
+
+    # Status Check
+    if res.status_code != 200:
+        # Retry 500 status per https://www.weather.gov/documentation/services-web-api
+        if res.status_code == 500:
+            time.sleep(3)
+            res = requests.get(hourly_url, headers=headers)
+            logging.info(f"Retrying 500 status getting weather for {hourly_url}")
+        # Re-Check status and note error if not resolved
+        if res.status_code != 200:
+            forecast['error'] = True
+            forecast['error_msg'] = f"Bad page status - {res.status_code}\n{hourly_url}"
+            logging.error(f"Status error getting weather for {hourly_url} - {res.status_code}")
+
     if 'title' in forecast.keys():
         forecast['error'] = True
-        forecast['error_msg'] = forecast['title']
+        forecast['error_msg'] = f"{forecast['title']}\n{hourly_url}"
         logging.error(f"Problem getting weather for {hourly_url} - {forecast['title']}")
     elif 'type' in forecast.keys():
         forecast['error'] = False
         forecast['error_msg'] = ''
-        return(forecast)
+        logging.info(f"Retrieved weather data for {hourly_url} - {res.status_code}")
     else:
         forecast['error'] = True
-        forecast['error_message'] = 'Unknown NWS API Error'
+        forecast['error_message'] = f"Unknown NWS API Error for\n{hourly_url}"
         logging.error(f"Problem getting weather for {hourly_url} - Unknown NWS API Error")
 
     return(forecast)
